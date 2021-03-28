@@ -7,10 +7,25 @@ import (
 
 // NewInMemDB returns a DB instance backed by local in-memory storage. Used only
 // for unittests.
-func NewInMemDB() DB {
-	return &inmemDB{
+func NewInMemDB(opts ...InMemOption) DB {
+	db := &inmemDB{
 		accounts:  map[int64]*Account{},
 		transfers: map[int64]*Transfer{},
+		now:       time.Now,
+	}
+	for _, opt := range opts {
+		opt(db)
+	}
+	return db
+}
+
+// InMemOption represents an option passed to an in-memory database
+type InMemOption func(i *inmemDB)
+
+// WithNowFunc allows to change the now() function for generating timestamps.
+func WithNowFunc(now func() time.Time) InMemOption {
+	return func(i *inmemDB) {
+		i.now = now
 	}
 }
 
@@ -18,6 +33,7 @@ type inmemDB struct {
 	mu        sync.Mutex
 	accounts  map[int64]*Account
 	transfers map[int64]*Transfer
+	now       func() time.Time
 }
 
 func (i *inmemDB) CreateAccount(account *Account) error {
@@ -31,7 +47,7 @@ func (i *inmemDB) CreateAccount(account *Account) error {
 	}
 
 	account.ID = int64(len(i.accounts) + 1)
-	account.CreatedAt = time.Now()
+	account.CreatedAt = i.now()
 	i.accounts[account.ID] = account
 	return nil
 }
@@ -99,6 +115,7 @@ func (i *inmemDB) CreateTransfer(transfer *Transfer) error {
 	}
 
 	transfer.ID = int64(len(i.transfers) + 1)
+	transfer.CreatedAt = i.now()
 	srcAccount.Balance = srcAccount.Balance.Sub(transfer.Amount)
 	dstAccount.Balance = dstAccount.Balance.Add(transfer.Amount)
 	i.accounts[srcAccount.ID] = srcAccount
