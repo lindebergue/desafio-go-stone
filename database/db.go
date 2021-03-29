@@ -1,3 +1,4 @@
+// Package database implements the data access layer.
 package database
 
 import (

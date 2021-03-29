@@ -1,3 +1,5 @@
+// Package auth provides routines for generating authentication hashes and
+// tokens.
 package auth
 
 import (
